@@ -231,6 +231,59 @@ func (t *FuturesTrader) OpenLong(symbol string, quantity float64, leverage int) 
 
 	// 注意：仓位模式应该由调用方（AutoTrader）在开仓前通过 SetMarginMode 设置
 
+	// 获取当前价格用于保证金计算
+	currentPrice, err := t.GetMarketPrice(symbol)
+	if err != nil {
+		return nil, fmt.Errorf("获取市场价格失败: %w", err)
+	}
+
+	// ⚠️ 关键：开仓前检查保证金是否足够，不足时自动调整数量
+	notionalValue := quantity * currentPrice            // 合约价值
+	requiredMargin := notionalValue / float64(leverage) // 需要的保证金
+	requiredMarginWithBuffer := requiredMargin * 1.02   // 加2%缓冲（考虑手续费）
+
+	// 获取账户余额
+	balance, err := t.GetBalance()
+	if err != nil {
+		return nil, fmt.Errorf("获取账户余额失败: %w", err)
+	}
+
+	availableBalance, ok := balance["availableBalance"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("获取可用余额失败")
+	}
+
+	originalQuantity := quantity
+
+	// 检查保证金是否充足，不足时自动调整数量
+	if requiredMarginWithBuffer > availableBalance {
+		// 计算可用保证金能开的最大仓位（预留2%缓冲）
+		maxMargin := availableBalance * 0.98                // 只用98%的可用余额，留2%安全边界
+		maxNotionalValue := maxMargin * float64(leverage)   // 最大合约价值
+		adjustedQuantity := maxNotionalValue / currentPrice // 调整后的数量
+
+		// 检查调整后的数量是否太小（小于原计划的30%则放弃）
+		if adjustedQuantity < originalQuantity*0.3 {
+			return nil, fmt.Errorf(
+				"保证金严重不足: 需要 %.2f USDT，可用 %.2f USDT，调整后仓位仅为原计划的 %.1f%%，低于30%%阈值，放弃开仓",
+				requiredMarginWithBuffer, availableBalance, (adjustedQuantity/originalQuantity)*100,
+			)
+		}
+
+		// 自动调整数量
+		quantity = adjustedQuantity
+		notionalValue = quantity * currentPrice
+		requiredMargin = notionalValue / float64(leverage)
+
+		log.Printf("  ⚠️ 保证金不足，自动调整数量:")
+		log.Printf("     原计划: %.4f (需要保证金 %.2f USDT)", originalQuantity, requiredMarginWithBuffer)
+		log.Printf("     调整为: %.4f (需要保证金 %.2f USDT, 占可用余额 %.1f%%)",
+			quantity, requiredMargin, (requiredMargin/availableBalance)*100)
+	} else {
+		log.Printf("  💰 保证金检查通过: 需要 %.2f USDT，可用 %.2f USDT，剩余 %.2f USDT",
+			requiredMarginWithBuffer, availableBalance, availableBalance-requiredMarginWithBuffer)
+	}
+
 	// 格式化数量到正确精度
 	quantityStr, err := t.FormatQuantity(symbol, quantity)
 	if err != nil {
@@ -273,6 +326,59 @@ func (t *FuturesTrader) OpenShort(symbol string, quantity float64, leverage int)
 	}
 
 	// 注意：仓位模式应该由调用方（AutoTrader）在开仓前通过 SetMarginMode 设置
+
+	// 获取当前价格用于保证金计算
+	currentPrice, err := t.GetMarketPrice(symbol)
+	if err != nil {
+		return nil, fmt.Errorf("获取市场价格失败: %w", err)
+	}
+
+	// ⚠️ 关键：开仓前检查保证金是否足够，不足时自动调整数量
+	notionalValue := quantity * currentPrice            // 合约价值
+	requiredMargin := notionalValue / float64(leverage) // 需要的保证金
+	requiredMarginWithBuffer := requiredMargin * 1.02   // 加2%缓冲（考虑手续费）
+
+	// 获取账户余额
+	balance, err := t.GetBalance()
+	if err != nil {
+		return nil, fmt.Errorf("获取账户余额失败: %w", err)
+	}
+
+	availableBalance, ok := balance["availableBalance"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("获取可用余额失败")
+	}
+
+	originalQuantity := quantity
+
+	// 检查保证金是否充足，不足时自动调整数量
+	if requiredMarginWithBuffer > availableBalance {
+		// 计算可用保证金能开的最大仓位（预留2%缓冲）
+		maxMargin := availableBalance * 0.98                // 只用98%的可用余额，留2%安全边界
+		maxNotionalValue := maxMargin * float64(leverage)   // 最大合约价值
+		adjustedQuantity := maxNotionalValue / currentPrice // 调整后的数量
+
+		// 检查调整后的数量是否太小（小于原计划的30%则放弃）
+		if adjustedQuantity < originalQuantity*0.3 {
+			return nil, fmt.Errorf(
+				"保证金严重不足: 需要 %.2f USDT，可用 %.2f USDT，调整后仓位仅为原计划的 %.1f%%，低于30%%阈值，放弃开仓",
+				requiredMarginWithBuffer, availableBalance, (adjustedQuantity/originalQuantity)*100,
+			)
+		}
+
+		// 自动调整数量
+		quantity = adjustedQuantity
+		notionalValue = quantity * currentPrice
+		requiredMargin = notionalValue / float64(leverage)
+
+		log.Printf("  ⚠️ 保证金不足，自动调整数量:")
+		log.Printf("     原计划: %.4f (需要保证金 %.2f USDT)", originalQuantity, requiredMarginWithBuffer)
+		log.Printf("     调整为: %.4f (需要保证金 %.2f USDT, 占可用余额 %.1f%%)",
+			quantity, requiredMargin, (requiredMargin/availableBalance)*100)
+	} else {
+		log.Printf("  💰 保证金检查通过: 需要 %.2f USDT，可用 %.2f USDT，剩余 %.2f USDT",
+			requiredMarginWithBuffer, availableBalance, availableBalance-requiredMarginWithBuffer)
+	}
 
 	// 格式化数量到正确精度
 	quantityStr, err := t.FormatQuantity(symbol, quantity)

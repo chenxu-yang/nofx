@@ -195,10 +195,19 @@ export interface TraderConfigData {
   trading_symbols: string;
   custom_prompt: string;
   override_base_prompt: boolean;
+  system_prompt_template: string;
   is_cross_margin: boolean;
   use_coin_pool: boolean;
   use_oi_top: boolean;
   initial_balance: number;
   scan_interval_minutes: number;
   is_running: boolean;
+}
+
+// Trade Records API Response
+export interface TradeRecordsResponse {
+  days: number;
+  only_trades: boolean;
+  total_count: number;
+  records: DecisionRecord[];
 }

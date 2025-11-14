@@ -9,6 +9,7 @@ import { CompetitionPage } from './components/CompetitionPage';
 import { LandingPage } from './pages/LandingPage';
 import HeaderBar from './components/landing/HeaderBar';
 import AILearning from './components/AILearning';
+import TradeRecords from './components/TradeRecords';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { t, type Language } from './i18n/translations';
@@ -622,6 +623,11 @@ function TraderDetailsPage({
       {/* AI Learning & Performance Analysis */}
       <div className="mb-6 animate-slide-in" style={{ animationDelay: '0.3s' }}>
         <AILearning traderId={selectedTrader.trader_id} />
+      </div>
+
+      {/* Trade Records */}
+      <div className="mb-6 animate-slide-in" style={{ animationDelay: '0.4s' }}>
+        <TradeRecords traderId={selectedTrader.trader_id} />
       </div>
     </div>
   );

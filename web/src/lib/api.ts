@@ -313,4 +313,21 @@ export const api = {
     });
     if (!res.ok) throw new Error('保存用户信号源配置失败');
   },
+
+  // 获取交易记录（支持时间范围和过滤）
+  async getTradeRecords(
+    traderId?: string,
+    days: number = 7,
+    onlyTrades: boolean = true
+  ): Promise<any> {
+    let url = `${API_BASE}/trade-records?days=${days}&only_trades=${onlyTrades}`;
+    if (traderId) {
+      url += `&trader_id=${traderId}`;
+    }
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('获取交易记录失败');
+    return res.json();
+  },
 };

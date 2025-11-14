@@ -10,11 +10,6 @@
     "BTCUSDT",
     "ETHUSDT",
     "SOLUSDT",
-    "BNBUSDT",
-    "XRPUSDT",
-    "DOGEUSDT",
-    "ADAUSDT",
-    "HYPEUSDT"
   ],
   "api_server_port": 8080,
   "max_daily_loss": 10.0,

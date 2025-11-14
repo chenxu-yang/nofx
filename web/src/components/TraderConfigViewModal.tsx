@@ -164,6 +164,10 @@ export function TraderConfigViewModal({
               )}
             </div>
             <div className="space-y-3">
+              <InfoRow 
+                label="系统提示词模板" 
+                value={traderData.system_prompt_template || 'default'} 
+              />
               <InfoRow label="覆盖默认提示词" value={traderData.override_base_prompt} />
               {traderData.custom_prompt ? (
                 <div>

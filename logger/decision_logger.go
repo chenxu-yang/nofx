@@ -543,6 +543,75 @@ func (l *DecisionLogger) AnalyzePerformance(lookbackCycles int) (*PerformanceAna
 	return analysis, nil
 }
 
+// GetTradeRecords 获取指定时间范围内有交易动作的记录（按时间倒序：最新的在前）
+// days: 查询最近几天的记录（0表示所有记录）
+// onlyWithTrades: 是否只返回有实际交易动作的记录（开仓/平仓）
+func (l *DecisionLogger) GetTradeRecords(days int, onlyWithTrades bool) ([]*DecisionRecord, error) {
+	files, err := ioutil.ReadDir(l.logDir)
+	if err != nil {
+		return nil, fmt.Errorf("读取日志目录失败: %w", err)
+	}
+
+	// 计算时间截止点
+	var cutoffTime time.Time
+	if days > 0 {
+		cutoffTime = time.Now().AddDate(0, 0, -days)
+	}
+
+	// 收集所有符合条件的记录
+	var records []*DecisionRecord
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		// 如果指定了时间范围，过滤掉太旧的文件
+		if days > 0 && file.ModTime().Before(cutoffTime) {
+			continue
+		}
+
+		filepath := filepath.Join(l.logDir, file.Name())
+		data, err := ioutil.ReadFile(filepath)
+		if err != nil {
+			continue
+		}
+
+		var record DecisionRecord
+		if err := json.Unmarshal(data, &record); err != nil {
+			continue
+		}
+
+		// 如果只需要有交易动作的记录，过滤掉没有交易动作的
+		if onlyWithTrades {
+			hasTradeAction := false
+			for _, action := range record.Decisions {
+				// 只统计成功的交易动作
+				if action.Success && (action.Action == "open_long" || action.Action == "open_short" ||
+					action.Action == "close_long" || action.Action == "close_short") {
+					hasTradeAction = true
+					break
+				}
+			}
+			if !hasTradeAction {
+				continue // 跳过没有交易动作的记录
+			}
+		}
+
+		records = append(records, &record)
+	}
+
+	// 按时间倒序排序（最新的在前）
+	for i := 0; i < len(records)-1; i++ {
+		for j := i + 1; j < len(records); j++ {
+			if records[i].Timestamp.Before(records[j].Timestamp) {
+				records[i], records[j] = records[j], records[i]
+			}
+		}
+	}
+
+	return records, nil
+}
+
 // calculateSharpeRatio 计算夏普比率
 // 基于账户净值的变化计算风险调整后收益
 func (l *DecisionLogger) calculateSharpeRatio(records []*DecisionRecord) float64 {
